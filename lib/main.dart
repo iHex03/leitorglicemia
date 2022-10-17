@@ -9,6 +9,16 @@ void main(List<String> args) {
   runApp(GlicoReader());
 }
 
+int counterGrafico = 0;
+void desenhaGrafico() {
+  if (counterGrafico >= 9) {
+    counterGrafico = 0;
+  } else {
+    counterGrafico++;
+  }
+  print(counterGrafico);
+}
+
 class GlicoReader extends StatefulWidget {
   @override
   State<GlicoReader> createState() => _GlicoReaderState();
@@ -29,29 +39,35 @@ class _GlicoReaderState extends State<GlicoReader> {
     });
   }
 
-  Future<void> send() async {
-    final Email email = Email(
-      body: 'Email body',
-      subject: 'Email subject',
-      recipients: ['lecrammattos@live.com'],
-    );
-    String platformResponse;
+  // Future<void> send() async {
+  //   final Email email = Email(
+  //     body: 'Email body',
+  //     subject: 'Email subject',
+  //     recipients: ['lecrammattos@live.com'],
+  //   );
+  //   String platformResponse;
 
-    try {
-      await FlutterEmailSender.send(email);
-      platformResponse = 'success';
-    } catch (error) {
-      print(error);
-      platformResponse = error.toString();
-      print(platformResponse);
-    }
-  }
+  //   try {
+  //     await FlutterEmailSender.send(email);
+  //     platformResponse = 'success';
+  //   } catch (error) {
+  //     print(error);
+  //     platformResponse = error.toString();
+  //     print(platformResponse);
+  //   }
+  // }
 
   @override
   void initState() {
     // TODO: implement initState
     fetchFileData();
     super.initState();
+    const time = Duration(seconds: 2);
+    Timer.periodic(
+        time,
+        (Timer t) => setState(() {
+              desenhaGrafico();
+            }));
   }
 
   final _nivelRiscoMin = TextEditingController();
@@ -62,14 +78,19 @@ class _GlicoReaderState extends State<GlicoReader> {
     List<String>? lstring = _data.split(" ");
     List<double> ldouble = lstring.map(double.parse).toList();
 
-    double lastGlicemia = ldouble.last;
+    List<double> novoGrafico =
+        ldouble.sublist(counterGrafico, counterGrafico + 5);
+    novoGrafico.removeAt(0);
+    novoGrafico.add(novoGrafico.last);
+
+    double lastGlicemia = novoGrafico.last;
     String avisoGlicemia = 'Seus valores estão normais.';
     String warningColor = "linear-gradient(to right, #00ff80, #00ff80)";
 
     if (lastGlicemia <= nivelRiscoMin || lastGlicemia >= nivelRiscoMax) {
       avisoGlicemia = 'Seus valores estão críticos, notificação enviada.';
       warningColor = "linear-gradient(to right, #cd5c5c, #cd5c5c)";
-      send();
+      // send();
     }
     void showToast() => Fluttertoast.showToast(
           msg: avisoGlicemia,
@@ -146,23 +167,7 @@ class _GlicoReaderState extends State<GlicoReader> {
                     ),
                   ),
                 ),
-                Container(
-                  width: 350,
-                  height: 300,
-                  decoration: BoxDecoration(
-                      border:
-                          Border.all(color: Color.fromRGBO(236, 179, 101, 1))),
-                  child: new Sparkline(
-                    data: ldouble,
-                    lineColor: Color.fromRGBO(236, 179, 101, 1),
-                    lineWidth: 4,
-                    pointsMode: PointsMode.all,
-                    // pointColor: Colors.black,
-                    pointSize: 8.0,
-                    fillMode: FillMode.below,
-                    fillColor: Color.fromRGBO(4, 41, 58, 1),
-                  ),
-                ),
+                GraphBuilder(novoGrafico: novoGrafico),
                 Container(
                   padding: EdgeInsets.all(16),
                   child: Align(
@@ -186,6 +191,7 @@ class _GlicoReaderState extends State<GlicoReader> {
                     child: ElevatedButton(
                       onPressed: () {
                         setState(() {
+                          desenhaGrafico();
                           showToast();
                         });
                       },
@@ -570,6 +576,35 @@ class _GlicoReaderState extends State<GlicoReader> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class GraphBuilder extends StatelessWidget {
+  const GraphBuilder({
+    Key? key,
+    required this.novoGrafico,
+  }) : super(key: key);
+
+  final List<double> novoGrafico;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 350,
+      height: 300,
+      decoration: BoxDecoration(
+          border: Border.all(color: Color.fromRGBO(236, 179, 101, 1))),
+      child: new Sparkline(
+        data: novoGrafico,
+        lineColor: Color.fromRGBO(236, 179, 101, 1),
+        lineWidth: 4,
+        pointsMode: PointsMode.all,
+        // pointColor: Colors.black,
+        pointSize: 8.0,
+        fillMode: FillMode.below,
+        fillColor: Color.fromRGBO(4, 41, 58, 1),
       ),
     );
   }
