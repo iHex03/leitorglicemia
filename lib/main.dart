@@ -16,7 +16,7 @@ void desenhaGrafico() {
   } else {
     counterGrafico++;
   }
-  print(counterGrafico);
+  // print(counterGrafico);
 }
 
 class GlicoReader extends StatefulWidget {
@@ -26,7 +26,7 @@ class GlicoReader extends StatefulWidget {
 
 class _GlicoReaderState extends State<GlicoReader> {
   String _data = "";
-  String filePath = 'assets/data0.txt';
+  String filePath = 'assets/data1.txt';
   List<double> hardData = [5, 6, 8, 11, 8, 13, 7, 9, 10];
   double nivelRiscoMin = 59;
   double nivelRiscoMax = 126;
@@ -62,7 +62,7 @@ class _GlicoReaderState extends State<GlicoReader> {
     // TODO: implement initState
     fetchFileData();
     super.initState();
-    const time = Duration(seconds: 2);
+    const time = Duration(seconds: 30);
     Timer.periodic(
         time,
         (Timer t) => setState(() {
@@ -86,20 +86,22 @@ class _GlicoReaderState extends State<GlicoReader> {
     double lastGlicemia = novoGrafico.last;
     String avisoGlicemia = 'Seus valores estão normais.';
     String warningColor = "linear-gradient(to right, #00ff80, #00ff80)";
+    int warningColorHex = 0xFF00FF80;
 
     if (lastGlicemia <= nivelRiscoMin || lastGlicemia >= nivelRiscoMax) {
       avisoGlicemia = 'Seus valores estão críticos, notificação enviada.';
       warningColor = "linear-gradient(to right, #cd5c5c, #cd5c5c)";
+      warningColorHex = 0xFFCD5C5C;
       // send();
     }
     void showToast() => Fluttertoast.showToast(
           msg: avisoGlicemia,
-          fontSize: 36,
-          backgroundColor: Colors.black,
+          fontSize: 16,
+          backgroundColor: Color(warningColorHex),
           textColor: Colors.black,
           webPosition: "center",
           webBgColor: warningColor,
-          gravity: ToastGravity.CENTER,
+          gravity: ToastGravity.BOTTOM,
           timeInSecForIosWeb: 2,
         );
 
@@ -113,36 +115,25 @@ class _GlicoReaderState extends State<GlicoReader> {
           child: GestureDetector(
             onTap: () => FocusScope.of(context).unfocus(),
             child: Column(
-              mainAxisSize: MainAxisSize.max,
               children: [
                 Align(
                   alignment: AlignmentDirectional(-0.75, 0),
                   child: Text(
-                    'Olá Marcel',
+                    'Olá Marcel, sua glicemia atual é:',
                     style: TextStyle(
                       color: Color.fromRGBO(236, 179, 101, 1),
-                      fontSize: 32,
-                    ),
-                  ),
-                ),
-                Align(
-                  alignment: AlignmentDirectional(-0.75, 0),
-                  child: Text(
-                    'Sua glicemia está em:',
-                    style: TextStyle(
-                      color: Color.fromRGBO(236, 179, 101, 1),
-                      fontSize: 16,
+                      fontSize: 24,
                     ),
                   ),
                 ),
                 Text(
-                  lastGlicemia.toString(),
+                  lastGlicemia.toInt().toString(),
                   style: TextStyle(
                     color: Color.fromRGBO(236, 179, 101, 1),
-                    fontSize: 110,
+                    fontSize: 64,
                   ),
                 ),
-                Expanded(
+                Container(
                   child: Align(
                     alignment: AlignmentDirectional(0, -1),
                     child: Row(
@@ -172,22 +163,6 @@ class _GlicoReaderState extends State<GlicoReader> {
                   padding: EdgeInsets.all(16),
                   child: Align(
                     alignment: AlignmentDirectional(0, 0),
-                    // child: Container(
-                    //   decoration: BoxDecoration(
-                    //     border: Border.all(
-                    //       color: Color.fromRGBO(236, 179, 101, 1),
-                    //     ),
-                    //     borderRadius: BorderRadius.all(
-                    //       Radius.circular(10),
-                    //     ),
-                    //   ),
-                    //   child: Text(
-                    //     _data,
-                    //     style: TextStyle(
-                    //       color: Color.fromRGBO(236, 179, 101, 1),
-                    //       fontSize: 32,
-                    //     ),
-                    //   ),
                     child: ElevatedButton(
                       onPressed: () {
                         setState(() {
@@ -220,14 +195,11 @@ class _GlicoReaderState extends State<GlicoReader> {
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     Container(
-                      child: Align(
-                        alignment: AlignmentDirectional(-0.75, 0),
-                        child: Text(
-                          'Níveis de Risco',
-                          style: TextStyle(
-                            color: Color.fromRGBO(236, 179, 101, 1),
-                            fontSize: 32,
-                          ),
+                      child: Text(
+                        'Níveis de Risco',
+                        style: TextStyle(
+                          color: Color.fromRGBO(236, 179, 101, 1),
+                          fontSize: 24,
                         ),
                       ),
                     ),
@@ -244,13 +216,13 @@ class _GlicoReaderState extends State<GlicoReader> {
                           );
                           Fluttertoast.showToast(
                             msg: 'Níveis de Risco salvos.',
-                            fontSize: 36,
-                            backgroundColor: Colors.black,
+                            fontSize: 16,
+                            backgroundColor: Color(0xFF00FF80),
                             textColor: Colors.black,
                             webPosition: "center",
                             webBgColor:
                                 "linear-gradient(to right, #00ff80, #00ff80)",
-                            gravity: ToastGravity.CENTER,
+                            gravity: ToastGravity.TOP,
                             timeInSecForIosWeb: 2,
                           );
                         },
@@ -258,7 +230,7 @@ class _GlicoReaderState extends State<GlicoReader> {
                           'Salvar',
                           style: TextStyle(
                             color: Color.fromARGB(255, 0, 0, 0),
-                            fontSize: 32,
+                            fontSize: 20,
                           ),
                         ),
                         style: ButtonStyle(
@@ -276,13 +248,12 @@ class _GlicoReaderState extends State<GlicoReader> {
                     )
                   ],
                 ),
-                Expanded(
+                Container(
                   child: Align(
                     alignment: AlignmentDirectional(0, 0),
                     child: Container(
                       padding: EdgeInsets.fromLTRB(0, 10, 0, 0),
                       width: 400,
-                      height: 150,
                       decoration: BoxDecoration(
                         color: Color.fromRGBO(255, 255, 255, 0),
                         shape: BoxShape.rectangle,
@@ -298,7 +269,7 @@ class _GlicoReaderState extends State<GlicoReader> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
-                                mainAxisSize: MainAxisSize.max,
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Expanded(
                                     child: Align(
@@ -338,12 +309,12 @@ class _GlicoReaderState extends State<GlicoReader> {
                                       child: Align(
                                         alignment: AlignmentDirectional(0, 0),
                                         child: Container(
-                                          width: 120,
+                                          width: 100,
                                           child: TextFormField(
                                             controller: _nivelRiscoMin,
                                             obscureText: false,
                                             decoration: InputDecoration(
-                                              hintText: '60',
+                                              hintText: '70',
                                               // hintStyle:,
                                               enabledBorder:
                                                   UnderlineInputBorder(
@@ -399,7 +370,7 @@ class _GlicoReaderState extends State<GlicoReader> {
                                       child: Align(
                                         alignment: AlignmentDirectional(0, 0),
                                         child: Container(
-                                          width: 120,
+                                          width: 100,
                                           child: TextFormField(
                                             controller: _nivelRiscoMax,
                                             obscureText: false,
@@ -485,7 +456,7 @@ class _GlicoReaderState extends State<GlicoReader> {
                             'Caso 1',
                             style: TextStyle(
                               color: Color.fromRGBO(236, 179, 101, 1),
-                              fontSize: 28,
+                              fontSize: 20,
                             ),
                           ),
                           style: ButtonStyle(
@@ -519,7 +490,7 @@ class _GlicoReaderState extends State<GlicoReader> {
                             'Caso 2',
                             style: TextStyle(
                               color: Color.fromRGBO(236, 179, 101, 1),
-                              fontSize: 28,
+                              fontSize: 20,
                             ),
                           ),
                           style: ButtonStyle(
@@ -553,7 +524,7 @@ class _GlicoReaderState extends State<GlicoReader> {
                             'Caso 3',
                             style: TextStyle(
                               color: Color.fromRGBO(236, 179, 101, 1),
-                              fontSize: 28,
+                              fontSize: 20,
                             ),
                           ),
                           style: ButtonStyle(
@@ -593,7 +564,7 @@ class GraphBuilder extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: 350,
-      height: 300,
+      height: 200,
       decoration: BoxDecoration(
           border: Border.all(color: Color.fromRGBO(236, 179, 101, 1))),
       child: new Sparkline(
