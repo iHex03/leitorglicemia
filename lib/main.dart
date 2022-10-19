@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_sparkline/flutter_sparkline.dart';
@@ -105,7 +106,8 @@ class _GlicoReaderState extends State<GlicoReader> {
           timeInSecForIosWeb: 2,
         );
 
-    final horarioAtual = DateTime.now();
+    var horarioAtual = DateFormat('KK:mm:ss').format(DateTime.now());
+    var dataAtual = DateFormat('dd/MM/yy').format(DateTime.now());
 
     return MaterialApp(
       theme: ThemeData(fontFamily: 'Coolvetica'),
@@ -142,6 +144,20 @@ class _GlicoReaderState extends State<GlicoReader> {
                       children: [
                         Text(
                           'Última leitura realizada em ',
+                          style: TextStyle(
+                            color: Color.fromRGBO(236, 179, 101, 1),
+                            fontSize: 16,
+                          ),
+                        ),
+                        Text(
+                          dataAtual.toString(),
+                          style: TextStyle(
+                            color: Color.fromRGBO(236, 179, 101, 1),
+                            fontSize: 16,
+                          ),
+                        ),
+                        Text(
+                          ' às ',
                           style: TextStyle(
                             color: Color.fromRGBO(236, 179, 101, 1),
                             fontSize: 16,

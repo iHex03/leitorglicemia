@@ -42,10 +42,12 @@ dependencies:
   google_fonts: ^3.0.1
   fluttertoast: ^8.0.9
   flutter_email_sender: ^5.1.0
+  intl: ^0.17.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  intl: ^0.17.0
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
