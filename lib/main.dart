@@ -1,14 +1,67 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
-import 'package:flutter_sparkline/flutter_sparkline.dart';
-import 'package:flutter_email_sender/flutter_email_sender.dart';
+// import 'package:flutter_sparkline/flutter_sparkline.dart';
+import 'package:chart_sparkline/chart_sparkline.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:http/http.dart' as http;
+import 'package:libserialport/libserialport.dart';
 
-void main(List<String> args) {
-  runApp(GlicoReader());
+void main() {
+  runApp(MaterialApp(
+    theme: ThemeData(fontFamily: 'Coolvetica'),
+    home: GlicoReader(),
+  ));
 }
+
+Future sendEmail(String emailEmergencia) async {
+  final serviceId = 'service_vml9rlx';
+  final templateId = 'template_yr2l02b';
+  final userId = 'xd79Ru_YBA-fqlkxD';
+
+  final url = Uri.parse('https://api.emailjs.com/api/v1.0/email/send');
+  final response = await http.post(url,
+      headers: {
+        'origin': 'http://localhost',
+        'Content-Type': 'application/json',
+      },
+      body: json.encode({
+        'service_id': serviceId,
+        'template_id': templateId,
+        'user_id': userId,
+        'template_params': {
+          'to_email': emailEmergencia,
+          'user_name': 'GlicoReader',
+          'user_email': 'dev.mmattos@gmail.com',
+          'user_subject': 'Níveis Críticos de Glicose de Marcel',
+          'user_message':
+              'Marcel atingiu um valor crítico de glicose, entre em contato para checar sua saúde!',
+        }
+      }));
+
+  print(response.body);
+  print('Email enviado para $emailEmergencia');
+}
+
+class GlicoReader extends StatefulWidget {
+  @override
+  State<GlicoReader> createState() => _GlicoReaderState();
+}
+
+String _data = "0 0 0 0 0 0 0 0 0 0 0 0 0 0";
+String filePath = 'assets/data1.txt';
+double nivelRiscoMin = 59;
+double nivelRiscoMax = 126;
+String emailEmergencia = 'lecrammattos@live.com';
+String nomeUsuario = 'Marcel';
+var ultimaHora = '00:00';
+var ultimaData = '1/1/99';
+final _nivelRiscoMin = TextEditingController();
+final _nivelRiscoMax = TextEditingController();
+final _emailEmergencia = TextEditingController();
+final _nomeUsuario = TextEditingController();
 
 int counterGrafico = 0;
 void desenhaGrafico() {
@@ -17,21 +70,11 @@ void desenhaGrafico() {
   } else {
     counterGrafico++;
   }
-  // print(counterGrafico);
-}
-
-class GlicoReader extends StatefulWidget {
-  @override
-  State<GlicoReader> createState() => _GlicoReaderState();
+  ultimaHora = DateFormat('HH:mm:ss').format(DateTime.now()).toString();
+  ultimaData = DateFormat('dd/MM/yy').format(DateTime.now()).toString();
 }
 
 class _GlicoReaderState extends State<GlicoReader> {
-  String _data = "";
-  String filePath = 'assets/data1.txt';
-  List<double> hardData = [5, 6, 8, 11, 8, 13, 7, 9, 10];
-  double nivelRiscoMin = 59;
-  double nivelRiscoMax = 126;
-
   fetchFileData() async {
     String responseText;
     responseText = await rootBundle.loadString(filePath);
@@ -40,30 +83,11 @@ class _GlicoReaderState extends State<GlicoReader> {
     });
   }
 
-  // Future<void> send() async {
-  //   final Email email = Email(
-  //     body: 'Email body',
-  //     subject: 'Email subject',
-  //     recipients: ['lecrammattos@live.com'],
-  //   );
-  //   String platformResponse;
-
-  //   try {
-  //     await FlutterEmailSender.send(email);
-  //     platformResponse = 'success';
-  //   } catch (error) {
-  //     print(error);
-  //     platformResponse = error.toString();
-  //     print(platformResponse);
-  //   }
-  // }
-
   @override
   void initState() {
-    // TODO: implement initState
     fetchFileData();
     super.initState();
-    const time = Duration(seconds: 30);
+    const time = Duration(seconds: 5);
     Timer.periodic(
         time,
         (Timer t) => setState(() {
@@ -71,11 +95,13 @@ class _GlicoReaderState extends State<GlicoReader> {
             }));
   }
 
-  final _nivelRiscoMin = TextEditingController();
-  final _nivelRiscoMax = TextEditingController();
-
   @override
   Widget build(BuildContext context) {
+    // List<String> availablePort = SerialPort.availablePorts;
+    // print('Available Ports: $availablePort');
+
+    fetchFileData();
+
     List<String>? lstring = _data.split(" ");
     List<double> ldouble = lstring.map(double.parse).toList();
 
@@ -93,104 +119,189 @@ class _GlicoReaderState extends State<GlicoReader> {
       avisoGlicemia = 'Seus valores estão críticos, notificação enviada.';
       warningColor = "linear-gradient(to right, #cd5c5c, #cd5c5c)";
       warningColorHex = 0xFFCD5C5C;
-      // send();
     }
-    void showToast() => Fluttertoast.showToast(
-          msg: avisoGlicemia,
-          fontSize: 16,
-          backgroundColor: Color(warningColorHex),
-          textColor: Colors.black,
-          webPosition: "center",
-          webBgColor: warningColor,
-          gravity: ToastGravity.BOTTOM,
-          timeInSecForIosWeb: 2,
-        );
+    void showToast() {
+      Fluttertoast.showToast(
+        msg: avisoGlicemia,
+        fontSize: 16,
+        backgroundColor: Color(warningColorHex),
+        textColor: Colors.black,
+        webPosition: "center",
+        webBgColor: warningColor,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 2,
+      );
+      if (lastGlicemia <= nivelRiscoMin || lastGlicemia >= nivelRiscoMax) {
+        // sendEmail(emailEmergencia);
+      }
+    }
 
-    var horarioAtual = DateFormat('KK:mm:ss').format(DateTime.now());
-    var dataAtual = DateFormat('dd/MM/yy').format(DateTime.now());
-
-    return MaterialApp(
-      theme: ThemeData(fontFamily: 'Coolvetica'),
-      home: Scaffold(
-        backgroundColor: Color(0xFF041C32),
-        body: SafeArea(
-          child: GestureDetector(
-            onTap: () => FocusScope.of(context).unfocus(),
-            child: Column(
-              children: [
-                Align(
-                  alignment: AlignmentDirectional(-0.75, 0),
-                  child: Text(
-                    'Olá Marcel, sua glicemia atual é:',
-                    style: TextStyle(
-                      color: Color.fromRGBO(236, 179, 101, 1),
-                      fontSize: 24,
-                    ),
-                  ),
-                ),
-                Text(
-                  lastGlicemia.toInt().toString(),
+    return Scaffold(
+      backgroundColor: Color(0xFF041C32),
+      body: SafeArea(
+        child: GestureDetector(
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: Column(
+            children: [
+              Align(
+                alignment: AlignmentDirectional(-0.75, 0),
+                child: Text(
+                  'Olá $nomeUsuario, sua glicemia atual é:',
                   style: TextStyle(
                     color: Color.fromRGBO(236, 179, 101, 1),
-                    fontSize: 64,
+                    fontSize: 24,
                   ),
                 ),
-                Container(
-                  child: Align(
-                    alignment: AlignmentDirectional(0, -1),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.max,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Última leitura realizada em ',
-                          style: TextStyle(
-                            color: Color.fromRGBO(236, 179, 101, 1),
-                            fontSize: 16,
-                          ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    lastGlicemia.toInt().toString(),
+                    style: TextStyle(
+                      color: Color.fromRGBO(236, 179, 101, 1),
+                      fontSize: 72,
+                    ),
+                  ),
+                  Text(
+                    'mg/dL',
+                    style: TextStyle(
+                      color: Color.fromRGBO(236, 179, 101, 1),
+                      fontSize: 16,
+                      height: 5,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                child: Text(
+                  'Última leitura realizada em $ultimaData às $ultimaHora',
+                  style: TextStyle(
+                    color: Color.fromRGBO(236, 179, 101, 1),
+                    fontSize: 18,
+                  ),
+                ),
+              ),
+              GraphBuilder(novoGrafico: novoGrafico),
+              Container(
+                child: Align(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        // desenhaGrafico();
+                        showToast();
+                      });
+                    },
+                    child: const Text(
+                      'Leitura Rápida',
+                      style: TextStyle(
+                        color: Color.fromRGBO(236, 179, 101, 1),
+                        fontSize: 32,
+                      ),
+                    ),
+                    style: ButtonStyle(
+                      backgroundColor: MaterialStateProperty.all(
+                          Color.fromRGBO(4, 41, 58, 0)),
+                      overlayColor: MaterialStateProperty.all(
+                          Color.fromRGBO(4, 41, 58, 1)),
+                      shape: MaterialStateProperty.all(
+                        RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        Text(
-                          dataAtual.toString(),
-                          style: TextStyle(
-                            color: Color.fromRGBO(236, 179, 101, 1),
-                            fontSize: 16,
-                          ),
-                        ),
-                        Text(
-                          ' às ',
-                          style: TextStyle(
-                            color: Color.fromRGBO(236, 179, 101, 1),
-                            fontSize: 16,
-                          ),
-                        ),
-                        Text(
-                          horarioAtual.toString(),
-                          style: TextStyle(
-                            color: Color.fromRGBO(236, 179, 101, 1),
-                            fontSize: 16,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
-                GraphBuilder(novoGrafico: novoGrafico),
+              ),
+              Container(
+                child: Align(
+                  child: Container(
+                    padding: EdgeInsets.fromLTRB(0, 10, 0, 0),
+                    width: 400,
+                    decoration: BoxDecoration(
+                      color: Color.fromRGBO(255, 255, 255, 0),
+                      shape: BoxShape.rectangle,
+                    ),
+                    child: Align(
+                      child: Padding(
+                        padding: EdgeInsetsDirectional.fromSTEB(0, 0, 0, 20),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.max,
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              child: ElevatedButton(
+                                child: const Text(
+                                  'Configurações',
+                                  style: TextStyle(
+                                    color: Color.fromARGB(255, 0, 0, 0),
+                                    fontSize: 20,
+                                  ),
+                                ),
+                                style: ButtonStyle(
+                                  backgroundColor: MaterialStateProperty.all(
+                                      Color.fromRGBO(236, 179, 101, 1)),
+                                  overlayColor: MaterialStateProperty.all(
+                                      Color.fromRGBO(4, 41, 58, 1)),
+                                  shape: MaterialStateProperty.all(
+                                    RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                ),
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (settingContext) =>
+                                            const _Settings()),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Settings extends StatelessWidget {
+  const _Settings({super.key});
+
+  @override
+  Widget build(BuildContext settingContext) {
+    return Scaffold(
+      backgroundColor: Color(0xFF041C32),
+      body: Align(
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
                 Container(
-                  padding: EdgeInsets.all(16),
+                  padding: EdgeInsets.fromLTRB(5, 20, 5, 20),
                   child: Align(
                     alignment: AlignmentDirectional(0, 0),
                     child: ElevatedButton(
                       onPressed: () {
-                        setState(() {
-                          desenhaGrafico();
-                          showToast();
-                        });
+                        filePath = 'assets/data1.txt';
+                        print(filePath);
                       },
                       child: const Text(
-                        'Leitura Rápida',
+                        'Caso 1',
                         style: TextStyle(
                           color: Color.fromRGBO(236, 179, 101, 1),
-                          fontSize: 32,
+                          fontSize: 20,
                         ),
                       ),
                       style: ButtonStyle(
@@ -207,361 +318,441 @@ class _GlicoReaderState extends State<GlicoReader> {
                     ),
                   ),
                 ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    Container(
-                      child: Text(
-                        'Níveis de Risco',
-                        style: TextStyle(
-                          color: Color.fromRGBO(236, 179, 101, 1),
-                          fontSize: 24,
-                        ),
-                      ),
-                    ),
-                    Container(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          setState(
-                            () {
-                              nivelRiscoMin = double.parse(_nivelRiscoMin.text);
-                              nivelRiscoMax = double.parse(_nivelRiscoMax.text);
-                              print(nivelRiscoMin);
-                              print(nivelRiscoMax);
-                            },
-                          );
-                          Fluttertoast.showToast(
-                            msg: 'Níveis de Risco salvos.',
-                            fontSize: 16,
-                            backgroundColor: Color(0xFF00FF80),
-                            textColor: Colors.black,
-                            webPosition: "center",
-                            webBgColor:
-                                "linear-gradient(to right, #00ff80, #00ff80)",
-                            gravity: ToastGravity.TOP,
-                            timeInSecForIosWeb: 2,
-                          );
-                        },
-                        child: const Text(
-                          'Salvar',
-                          style: TextStyle(
-                            color: Color.fromARGB(255, 0, 0, 0),
-                            fontSize: 20,
-                          ),
-                        ),
-                        style: ButtonStyle(
-                          backgroundColor: MaterialStateProperty.all(
-                              Color.fromRGBO(236, 179, 101, 1)),
-                          overlayColor: MaterialStateProperty.all(
-                              Color.fromRGBO(4, 41, 58, 1)),
-                          shape: MaterialStateProperty.all(
-                            RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                        ),
-                      ),
-                    )
-                  ],
-                ),
                 Container(
+                  padding: EdgeInsets.fromLTRB(5, 20, 5, 20),
                   child: Align(
                     alignment: AlignmentDirectional(0, 0),
-                    child: Container(
-                      padding: EdgeInsets.fromLTRB(0, 10, 0, 0),
-                      width: 400,
-                      decoration: BoxDecoration(
-                        color: Color.fromRGBO(255, 255, 255, 0),
-                        shape: BoxShape.rectangle,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        filePath = 'assets/data2.txt';
+                        print(filePath);
+                      },
+                      child: const Text(
+                        'Caso 2',
+                        style: TextStyle(
+                          color: Color.fromRGBO(236, 179, 101, 1),
+                          fontSize: 20,
+                        ),
                       ),
-                      alignment: AlignmentDirectional(0, 0),
-                      child: Align(
-                        alignment: AlignmentDirectional(0, 0),
-                        child: Padding(
-                          padding: EdgeInsetsDirectional.fromSTEB(0, 0, 0, 20),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.max,
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Expanded(
-                                    child: Align(
-                                      alignment: AlignmentDirectional(0, 0),
-                                      child: Text(
-                                        'Mínimo',
-                                        style: TextStyle(
-                                          color:
-                                              Color.fromRGBO(236, 179, 101, 1),
-                                          fontSize: 16,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: Align(
-                                      alignment: AlignmentDirectional(0, 0),
-                                      child: Text(
-                                        'Máximo',
-                                        style: TextStyle(
-                                          color:
-                                              Color.fromRGBO(236, 179, 101, 1),
-                                          fontSize: 16,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Align(
-                                alignment: AlignmentDirectional(0, 0),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.max,
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  children: [
-                                    Expanded(
-                                      child: Align(
-                                        alignment: AlignmentDirectional(0, 0),
-                                        child: Container(
-                                          width: 100,
-                                          child: TextFormField(
-                                            controller: _nivelRiscoMin,
-                                            obscureText: false,
-                                            decoration: InputDecoration(
-                                              hintText: '70',
-                                              // hintStyle:,
-                                              enabledBorder:
-                                                  UnderlineInputBorder(
-                                                borderSide: BorderSide(
-                                                  color: Color.fromRGBO(
-                                                      0, 0, 0, 0),
-                                                  width: 1,
-                                                ),
-                                                borderRadius:
-                                                    BorderRadius.circular(30),
-                                              ),
-                                              focusedBorder:
-                                                  UnderlineInputBorder(
-                                                borderSide: BorderSide(
-                                                  color: Color.fromRGBO(
-                                                      0, 0, 0, 0),
-                                                  width: 1,
-                                                ),
-                                                borderRadius:
-                                                    BorderRadius.circular(30),
-                                              ),
-                                              errorBorder: UnderlineInputBorder(
-                                                borderSide: BorderSide(
-                                                  color: Color.fromRGBO(
-                                                      255, 0, 0, 1),
-                                                  width: 1,
-                                                ),
-                                                borderRadius:
-                                                    BorderRadius.circular(30),
-                                              ),
-                                              focusedErrorBorder:
-                                                  UnderlineInputBorder(
-                                                borderSide: BorderSide(
-                                                  color: Color.fromRGBO(
-                                                      255, 0, 0, 1),
-                                                  width: 1,
-                                                ),
-                                                borderRadius:
-                                                    BorderRadius.circular(30),
-                                              ),
-                                              filled: true,
-                                              fillColor: Color(0xFFD9D9D9),
-                                            ),
-                                            // style: ,
-                                            textAlign: TextAlign.center,
-                                            maxLines: 1,
-                                            keyboardType: TextInputType.number,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      child: Align(
-                                        alignment: AlignmentDirectional(0, 0),
-                                        child: Container(
-                                          width: 100,
-                                          child: TextFormField(
-                                            controller: _nivelRiscoMax,
-                                            obscureText: false,
-                                            decoration: InputDecoration(
-                                              hintText: '126',
-                                              // hintStyle:,
-                                              enabledBorder:
-                                                  UnderlineInputBorder(
-                                                borderSide: BorderSide(
-                                                  color: Color(0x00000000),
-                                                  width: 1,
-                                                ),
-                                                borderRadius:
-                                                    BorderRadius.circular(30),
-                                              ),
-                                              focusedBorder:
-                                                  UnderlineInputBorder(
-                                                borderSide: BorderSide(
-                                                  color: Color(0x00000000),
-                                                  width: 1,
-                                                ),
-                                                borderRadius:
-                                                    BorderRadius.circular(30),
-                                              ),
-                                              errorBorder: UnderlineInputBorder(
-                                                borderSide: BorderSide(
-                                                  color: Color.fromRGBO(
-                                                      255, 0, 0, 1),
-                                                  width: 1,
-                                                ),
-                                                borderRadius:
-                                                    BorderRadius.circular(30),
-                                              ),
-                                              focusedErrorBorder:
-                                                  UnderlineInputBorder(
-                                                borderSide: BorderSide(
-                                                  color: Color.fromRGBO(
-                                                      255, 0, 0, 1),
-                                                  width: 1,
-                                                ),
-                                                borderRadius:
-                                                    BorderRadius.circular(30),
-                                              ),
-                                              filled: true,
-                                              fillColor: Color.fromRGBO(
-                                                  217, 217, 217, 1),
-                                            ),
-                                            // style: ,
-                                            textAlign: TextAlign.center,
-                                            maxLines: 1,
-                                            keyboardType: TextInputType.number,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
+                      style: ButtonStyle(
+                        backgroundColor: MaterialStateProperty.all(
+                            Color.fromRGBO(4, 41, 58, 0)),
+                        overlayColor: MaterialStateProperty.all(
+                            Color.fromRGBO(4, 41, 58, 1)),
+                        shape: MaterialStateProperty.all(
+                          RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
                           ),
                         ),
                       ),
                     ),
                   ),
                 ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    Container(
-                      padding: EdgeInsets.fromLTRB(5, 20, 5, 20),
-                      child: Align(
-                        alignment: AlignmentDirectional(0, 0),
-                        child: ElevatedButton(
-                          onPressed: () {
-                            setState(
-                              () {
-                                filePath = 'assets/data1.txt';
-                                fetchFileData();
-                              },
-                            );
-                          },
-                          child: const Text(
-                            'Caso 1',
-                            style: TextStyle(
-                              color: Color.fromRGBO(236, 179, 101, 1),
-                              fontSize: 20,
-                            ),
-                          ),
-                          style: ButtonStyle(
-                            backgroundColor: MaterialStateProperty.all(
-                                Color.fromRGBO(4, 41, 58, 0)),
-                            overlayColor: MaterialStateProperty.all(
-                                Color.fromRGBO(4, 41, 58, 1)),
-                            shape: MaterialStateProperty.all(
-                              RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
+                Container(
+                  padding: EdgeInsets.fromLTRB(5, 20, 5, 20),
+                  child: Align(
+                    alignment: AlignmentDirectional(0, 0),
+                    child: ElevatedButton(
+                      onPressed: () {
+                        filePath = 'assets/data3.txt';
+                        print(filePath);
+                      },
+                      child: const Text(
+                        'Caso 3',
+                        style: TextStyle(
+                          color: Color.fromRGBO(236, 179, 101, 1),
+                          fontSize: 20,
+                        ),
+                      ),
+                      style: ButtonStyle(
+                        backgroundColor: MaterialStateProperty.all(
+                            Color.fromRGBO(4, 41, 58, 0)),
+                        overlayColor: MaterialStateProperty.all(
+                            Color.fromRGBO(4, 41, 58, 1)),
+                        shape: MaterialStateProperty.all(
+                          RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
                           ),
                         ),
                       ),
                     ),
-                    Container(
-                      padding: EdgeInsets.fromLTRB(5, 20, 5, 20),
-                      child: Align(
-                        alignment: AlignmentDirectional(0, 0),
-                        child: ElevatedButton(
-                          onPressed: () {
-                            setState(
-                              () {
-                                filePath = 'assets/data2.txt';
-                                fetchFileData();
-                              },
-                            );
-                          },
-                          child: const Text(
-                            'Caso 2',
-                            style: TextStyle(
-                              color: Color.fromRGBO(236, 179, 101, 1),
-                              fontSize: 20,
-                            ),
-                          ),
-                          style: ButtonStyle(
-                            backgroundColor: MaterialStateProperty.all(
-                                Color.fromRGBO(4, 41, 58, 0)),
-                            overlayColor: MaterialStateProperty.all(
-                                Color.fromRGBO(4, 41, 58, 1)),
-                            shape: MaterialStateProperty.all(
-                              RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    Container(
-                      padding: EdgeInsets.fromLTRB(5, 20, 5, 20),
-                      child: Align(
-                        alignment: AlignmentDirectional(0, 0),
-                        child: ElevatedButton(
-                          onPressed: () {
-                            setState(
-                              () {
-                                filePath = 'assets/data3.txt';
-                                fetchFileData();
-                              },
-                            );
-                          },
-                          child: const Text(
-                            'Caso 3',
-                            style: TextStyle(
-                              color: Color.fromRGBO(236, 179, 101, 1),
-                              fontSize: 20,
-                            ),
-                          ),
-                          style: ButtonStyle(
-                            backgroundColor: MaterialStateProperty.all(
-                                Color.fromRGBO(4, 41, 58, 0)),
-                            overlayColor: MaterialStateProperty.all(
-                                Color.fromRGBO(4, 41, 58, 1)),
-                            shape: MaterialStateProperty.all(
-                              RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                )
+                  ),
+                ),
               ],
             ),
-          ),
+            Container(
+              child: Text(
+                'Níveis de Risco',
+                style: TextStyle(
+                  color: Color.fromRGBO(236, 179, 101, 1),
+                  fontSize: 24,
+                ),
+              ),
+            ),
+            Container(
+              child: Align(
+                child: Container(
+                  padding: EdgeInsets.fromLTRB(0, 10, 0, 0),
+                  width: 400,
+                  decoration: BoxDecoration(
+                    color: Color.fromRGBO(255, 255, 255, 0),
+                    shape: BoxShape.rectangle,
+                  ),
+                  child: Align(
+                    child: Padding(
+                      padding: EdgeInsetsDirectional.fromSTEB(0, 0, 0, 20),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.max,
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Expanded(
+                                child: Align(
+                                  child: Text(
+                                    'Mínimo',
+                                    style: TextStyle(
+                                      color: Color.fromRGBO(236, 179, 101, 1),
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: Align(
+                                  child: Text(
+                                    'Máximo',
+                                    style: TextStyle(
+                                      color: Color.fromRGBO(236, 179, 101, 1),
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          Align(
+                            child: Row(
+                              mainAxisSize: MainAxisSize.max,
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Align(
+                                    child: Container(
+                                      width: 100,
+                                      child: TextFormField(
+                                        controller: _nivelRiscoMin,
+                                        obscureText: false,
+                                        decoration: InputDecoration(
+                                          hintText: '60',
+                                          enabledBorder: UnderlineInputBorder(
+                                            borderSide: BorderSide(
+                                              color: Color.fromRGBO(0, 0, 0, 0),
+                                              width: 1,
+                                            ),
+                                            borderRadius:
+                                                BorderRadius.circular(30),
+                                          ),
+                                          focusedBorder: UnderlineInputBorder(
+                                            borderSide: BorderSide(
+                                              color: Color.fromRGBO(0, 0, 0, 0),
+                                              width: 1,
+                                            ),
+                                            borderRadius:
+                                                BorderRadius.circular(30),
+                                          ),
+                                          errorBorder: UnderlineInputBorder(
+                                            borderSide: BorderSide(
+                                              color:
+                                                  Color.fromRGBO(255, 0, 0, 1),
+                                              width: 1,
+                                            ),
+                                            borderRadius:
+                                                BorderRadius.circular(30),
+                                          ),
+                                          focusedErrorBorder:
+                                              UnderlineInputBorder(
+                                            borderSide: BorderSide(
+                                              color:
+                                                  Color.fromRGBO(255, 0, 0, 1),
+                                              width: 1,
+                                            ),
+                                            borderRadius:
+                                                BorderRadius.circular(30),
+                                          ),
+                                          filled: true,
+                                          fillColor: Color(0xFFD9D9D9),
+                                        ),
+                                        textAlign: TextAlign.center,
+                                        maxLines: 1,
+                                        keyboardType: TextInputType.number,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Align(
+                                    child: Container(
+                                      width: 100,
+                                      child: TextFormField(
+                                        controller: _nivelRiscoMax,
+                                        obscureText: false,
+                                        decoration: InputDecoration(
+                                          hintText: '126',
+                                          // hintStyle:,
+                                          enabledBorder: UnderlineInputBorder(
+                                            borderSide: BorderSide(
+                                              color: Color(0x00000000),
+                                              width: 1,
+                                            ),
+                                            borderRadius:
+                                                BorderRadius.circular(30),
+                                          ),
+                                          focusedBorder: UnderlineInputBorder(
+                                            borderSide: BorderSide(
+                                              color: Color(0x00000000),
+                                              width: 1,
+                                            ),
+                                            borderRadius:
+                                                BorderRadius.circular(30),
+                                          ),
+                                          errorBorder: UnderlineInputBorder(
+                                            borderSide: BorderSide(
+                                              color:
+                                                  Color.fromRGBO(255, 0, 0, 1),
+                                              width: 1,
+                                            ),
+                                            borderRadius:
+                                                BorderRadius.circular(30),
+                                          ),
+                                          focusedErrorBorder:
+                                              UnderlineInputBorder(
+                                            borderSide: BorderSide(
+                                              color:
+                                                  Color.fromRGBO(255, 0, 0, 1),
+                                              width: 1,
+                                            ),
+                                            borderRadius:
+                                                BorderRadius.circular(30),
+                                          ),
+                                          filled: true,
+                                          fillColor:
+                                              Color.fromRGBO(217, 217, 217, 1),
+                                        ),
+                                        // style: ,
+                                        textAlign: TextAlign.center,
+                                        maxLines: 1,
+                                        keyboardType: TextInputType.number,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Container(
+              child: Text(
+                'Contato de Emergência',
+                style: TextStyle(
+                  color: Color.fromRGBO(236, 179, 101, 1),
+                  fontSize: 24,
+                ),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsetsDirectional.fromSTEB(0, 0, 0, 20),
+              child: Container(
+                width: 300,
+                child: TextFormField(
+                  controller: _emailEmergencia,
+                  obscureText: false,
+                  decoration: InputDecoration(
+                    hintText: 'contato@email.com',
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(
+                        color: Color(0x00000000),
+                        width: 1,
+                      ),
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(
+                        color: Color(0x00000000),
+                        width: 1,
+                      ),
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    errorBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(
+                        color: Color.fromRGBO(255, 0, 0, 1),
+                        width: 1,
+                      ),
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    focusedErrorBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(
+                        color: Color.fromRGBO(255, 0, 0, 1),
+                        width: 1,
+                      ),
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    filled: true,
+                    fillColor: Color.fromRGBO(217, 217, 217, 1),
+                  ),
+                  // style: ,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  keyboardType: TextInputType.emailAddress,
+                ),
+              ),
+            ),
+            Container(
+              child: Text(
+                'Nome do Usuário',
+                style: TextStyle(
+                  color: Color.fromRGBO(236, 179, 101, 1),
+                  fontSize: 24,
+                ),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsetsDirectional.fromSTEB(0, 0, 0, 20),
+              child: Container(
+                width: 300,
+                child: TextFormField(
+                  controller: _nomeUsuario,
+                  obscureText: false,
+                  decoration: InputDecoration(
+                    hintText: 'Insira seu nome aqui',
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(
+                        color: Color(0x00000000),
+                        width: 1,
+                      ),
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(
+                        color: Color(0x00000000),
+                        width: 1,
+                      ),
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    errorBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(
+                        color: Color.fromRGBO(255, 0, 0, 1),
+                        width: 1,
+                      ),
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    focusedErrorBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(
+                        color: Color.fromRGBO(255, 0, 0, 1),
+                        width: 1,
+                      ),
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    filled: true,
+                    fillColor: Color.fromRGBO(217, 217, 217, 1),
+                  ),
+                  // style: ,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  keyboardType: TextInputType.emailAddress,
+                ),
+              ),
+            ),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        nivelRiscoMin = double.parse(_nivelRiscoMin.text);
+                        nivelRiscoMax = double.parse(_nivelRiscoMax.text);
+                        emailEmergencia = _emailEmergencia.text;
+                        nomeUsuario = _nomeUsuario.text;
+                        print(nivelRiscoMin);
+                        print(nivelRiscoMax);
+                        print(emailEmergencia);
+                        print(nomeUsuario);
+                        Fluttertoast.showToast(
+                          msg: 'Suas configurações foram salvas.',
+                          fontSize: 16,
+                          backgroundColor: Color(0xFF00FF80),
+                          textColor: Colors.black,
+                          webPosition: "center",
+                          webBgColor:
+                              "linear-gradient(to right, #00ff80, #00ff80)",
+                          gravity: ToastGravity.TOP,
+                          timeInSecForIosWeb: 2,
+                        );
+                      },
+                      child: const Text(
+                        'Salvar Configurações',
+                        style: TextStyle(
+                          color: Color.fromARGB(255, 0, 0, 0),
+                          fontSize: 24,
+                        ),
+                      ),
+                      style: ButtonStyle(
+                        backgroundColor: MaterialStateProperty.all(
+                            Color.fromRGBO(236, 179, 101, 1)),
+                        overlayColor: MaterialStateProperty.all(
+                            Color.fromRGBO(4, 41, 58, 1)),
+                        shape: MaterialStateProperty.all(
+                          RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        print(filePath);
+
+                        Navigator.pop(settingContext);
+                        print(filePath);
+                        print(emailEmergencia);
+                      },
+                      child: const Text(
+                        '< Início',
+                        style: TextStyle(
+                          color: Color.fromARGB(255, 0, 0, 0),
+                          fontSize: 36,
+                        ),
+                      ),
+                      style: ButtonStyle(
+                        backgroundColor: MaterialStateProperty.all(
+                            Color.fromRGBO(236, 179, 101, 1)),
+                        overlayColor: MaterialStateProperty.all(
+                            Color.fromRGBO(4, 41, 58, 1)),
+                        shape: MaterialStateProperty.all(
+                          RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -580,18 +771,18 @@ class GraphBuilder extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: 350,
-      height: 200,
+      height: 300,
       decoration: BoxDecoration(
           border: Border.all(color: Color.fromRGBO(236, 179, 101, 1))),
       child: new Sparkline(
         data: novoGrafico,
         lineColor: Color.fromRGBO(236, 179, 101, 1),
         lineWidth: 4,
-        pointsMode: PointsMode.all,
-        // pointColor: Colors.black,
-        pointSize: 8.0,
-        fillMode: FillMode.below,
-        fillColor: Color.fromRGBO(4, 41, 58, 1),
+        // pointsMode: PointsMode.all,
+        // pointSize: 8.0,
+        // fillMode: FillMode.below,
+        // fillColor: Color.fromRGBO(4, 41, 58, 1),
+        enableGridLines: true,
       ),
     );
   }

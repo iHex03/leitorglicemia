@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "596024932682",
+    "project_id": "glicoreader",
+    "storage_bucket": "glicoreader.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:596024932682:android:be2667c36f58046aac29b3",
+        "android_client_info": {
+          "package_name": "com.example.myapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "596024932682-vofujp6eqar0iooippeif4rsa0k09g33.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDGOAA6ij_TtJc3hUKFHYLBtP4aDD31HKo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "596024932682-vofujp6eqar0iooippeif4rsa0k09g33.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
