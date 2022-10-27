@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter/services.dart' show Uint8List, rootBundle;
 // import 'package:flutter_sparkline/flutter_sparkline.dart';
 import 'package:chart_sparkline/chart_sparkline.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -99,6 +99,15 @@ class _GlicoReaderState extends State<GlicoReader> {
   Widget build(BuildContext context) {
     // List<String> availablePort = SerialPort.availablePorts;
     // print('Available Ports: $availablePort');
+
+    // SerialPort port1 = SerialPort('COM4');
+    // port1.openReadWrite();
+
+    // try {
+    //   print(port1.write(_stringToUint8List('hello')));
+    // } on SerialPortError catch (err, _) {
+    //   print(SerialPort.lastError);
+    // }
 
     fetchFileData();
 
@@ -274,6 +283,12 @@ class _GlicoReaderState extends State<GlicoReader> {
     );
   }
 }
+
+// Uint8List _stringToUint8List(String data) {
+//   List<int> codeUnits = data.codeUnits;
+//   Uint8List uint8list = Uint8List.fromList(codeUnits);
+//   return uint8list;
+// }
 
 class _Settings extends StatelessWidget {
   const _Settings({super.key});
