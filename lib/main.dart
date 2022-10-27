@@ -3,11 +3,10 @@ import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show Uint8List, rootBundle;
-// import 'package:flutter_sparkline/flutter_sparkline.dart';
 import 'package:chart_sparkline/chart_sparkline.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:http/http.dart' as http;
-import 'package:libserialport/libserialport.dart';
+import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 
 void main() {
   runApp(MaterialApp(
@@ -72,6 +71,33 @@ void desenhaGrafico() {
   }
   ultimaHora = DateFormat('HH:mm:ss').format(DateTime.now()).toString();
   ultimaData = DateFormat('dd/MM/yy').format(DateTime.now()).toString();
+  bluetooth();
+}
+
+void bluetooth() async{
+
+try {
+    BluetoothConnection connection = await BluetoothConnection.toAddress("98:DA:C0:00:2A:92");
+    print('Connected to the device');
+
+    connection.input?.listen((Uint8List data) {
+        print('Data incoming: ${ascii.decode(data)}');
+        connection.output.add(data); // Sending data
+
+        if (ascii.decode(data).contains('!')) {
+            connection.finish(); // Closing connection
+            print('Disconnecting by local host');
+        }
+    }).onDone(() {
+        print('Disconnected by remote request');
+    });
+
+
+}
+catch (exception) {
+    print('Cannot connect, exception occured');
+}
+
 }
 
 class _GlicoReaderState extends State<GlicoReader> {
@@ -87,7 +113,7 @@ class _GlicoReaderState extends State<GlicoReader> {
   void initState() {
     fetchFileData();
     super.initState();
-    const time = Duration(seconds: 5);
+    const time = Duration(seconds: 10);
     Timer.periodic(
         time,
         (Timer t) => setState(() {
@@ -97,6 +123,12 @@ class _GlicoReaderState extends State<GlicoReader> {
 
   @override
   Widget build(BuildContext context) {
+    // void serialReader() async
+    // {
+    // var status = await Permission.storage.status;
+    //               if (!status.isGranted) {
+    //                 await Permission.storage.request();
+    //               }
     // List<String> availablePort = SerialPort.availablePorts;
     // print('Available Ports: $availablePort');
 
@@ -108,8 +140,14 @@ class _GlicoReaderState extends State<GlicoReader> {
     // } on SerialPortError catch (err, _) {
     //   print(SerialPort.lastError);
     // }
-
-    fetchFileData();
+    // }
+    // serialReader();
+Timer.periodic(
+        Duration(seconds: 5),
+        (Timer t) => setState(() {
+              bluetooth();
+            }));
+        fetchFileData();
 
     List<String>? lstring = _data.split(" ");
     List<double> ldouble = lstring.map(double.parse).toList();
