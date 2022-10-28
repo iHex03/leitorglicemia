@@ -6,7 +6,7 @@ import 'package:flutter/services.dart' show Uint8List, rootBundle;
 import 'package:chart_sparkline/chart_sparkline.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:http/http.dart' as http;
-import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
+// import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 
 void main() {
   runApp(MaterialApp(
@@ -15,7 +15,7 @@ void main() {
   ));
 }
 
-Future sendEmail(String emailEmergencia) async {
+Future sendEmail(String emailEmergencia, nomeUsuario) async {
   final serviceId = 'service_vml9rlx';
   final templateId = 'template_yr2l02b';
   final userId = 'xd79Ru_YBA-fqlkxD';
@@ -34,9 +34,9 @@ Future sendEmail(String emailEmergencia) async {
           'to_email': emailEmergencia,
           'user_name': 'GlicoReader',
           'user_email': 'dev.mmattos@gmail.com',
-          'user_subject': 'Níveis Críticos de Glicose de Marcel',
+          'user_subject': 'Níveis Críticos de Glicose de $nomeUsuario',
           'user_message':
-              'Marcel atingiu um valor crítico de glicose, entre em contato para checar sua saúde!',
+              '$nomeUsuario atingiu um valor crítico de glicose, entre em contato para checar sua saúde!',
         }
       }));
 
@@ -71,33 +71,6 @@ void desenhaGrafico() {
   }
   ultimaHora = DateFormat('HH:mm:ss').format(DateTime.now()).toString();
   ultimaData = DateFormat('dd/MM/yy').format(DateTime.now()).toString();
-  bluetooth();
-}
-
-void bluetooth() async{
-
-try {
-    BluetoothConnection connection = await BluetoothConnection.toAddress("98:DA:C0:00:2A:92");
-    print('Connected to the device');
-
-    connection.input?.listen((Uint8List data) {
-        print('Data incoming: ${ascii.decode(data)}');
-        connection.output.add(data); // Sending data
-
-        if (ascii.decode(data).contains('!')) {
-            connection.finish(); // Closing connection
-            print('Disconnecting by local host');
-        }
-    }).onDone(() {
-        print('Disconnected by remote request');
-    });
-
-
-}
-catch (exception) {
-    print('Cannot connect, exception occured');
-}
-
 }
 
 class _GlicoReaderState extends State<GlicoReader> {
@@ -123,31 +96,7 @@ class _GlicoReaderState extends State<GlicoReader> {
 
   @override
   Widget build(BuildContext context) {
-    // void serialReader() async
-    // {
-    // var status = await Permission.storage.status;
-    //               if (!status.isGranted) {
-    //                 await Permission.storage.request();
-    //               }
-    // List<String> availablePort = SerialPort.availablePorts;
-    // print('Available Ports: $availablePort');
-
-    // SerialPort port1 = SerialPort('COM4');
-    // port1.openReadWrite();
-
-    // try {
-    //   print(port1.write(_stringToUint8List('hello')));
-    // } on SerialPortError catch (err, _) {
-    //   print(SerialPort.lastError);
-    // }
-    // }
-    // serialReader();
-Timer.periodic(
-        Duration(seconds: 5),
-        (Timer t) => setState(() {
-              bluetooth();
-            }));
-        fetchFileData();
+    fetchFileData();
 
     List<String>? lstring = _data.split(" ");
     List<double> ldouble = lstring.map(double.parse).toList();
@@ -179,7 +128,7 @@ Timer.periodic(
         timeInSecForIosWeb: 2,
       );
       if (lastGlicemia <= nivelRiscoMin || lastGlicemia >= nivelRiscoMax) {
-        // sendEmail(emailEmergencia);
+        sendEmail(emailEmergencia, nomeUsuario);
       }
     }
 
@@ -321,12 +270,6 @@ Timer.periodic(
     );
   }
 }
-
-// Uint8List _stringToUint8List(String data) {
-//   List<int> codeUnits = data.codeUnits;
-//   Uint8List uint8list = Uint8List.fromList(codeUnits);
-//   return uint8list;
-// }
 
 class _Settings extends StatelessWidget {
   const _Settings({super.key});
@@ -777,7 +720,6 @@ class _Settings extends StatelessWidget {
                     child: ElevatedButton(
                       onPressed: () {
                         print(filePath);
-
                         Navigator.pop(settingContext);
                         print(filePath);
                         print(emailEmergencia);
@@ -831,10 +773,6 @@ class GraphBuilder extends StatelessWidget {
         data: novoGrafico,
         lineColor: Color.fromRGBO(236, 179, 101, 1),
         lineWidth: 4,
-        // pointsMode: PointsMode.all,
-        // pointSize: 8.0,
-        // fillMode: FillMode.below,
-        // fillColor: Color.fromRGBO(4, 41, 58, 1),
         enableGridLines: true,
       ),
     );
