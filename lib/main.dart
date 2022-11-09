@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 
 void main() {
   runApp(MaterialApp(
+    debugShowCheckedModeBanner: false,
     theme: ThemeData(fontFamily: 'Coolvetica'),
     home: GlicoReader(),
   ));
@@ -663,7 +664,7 @@ class _Settings extends StatelessWidget {
                   // style: ,
                   textAlign: TextAlign.center,
                   maxLines: 1,
-                  keyboardType: TextInputType.emailAddress,
+                  keyboardType: TextInputType.name,
                 ),
               ),
             ),
