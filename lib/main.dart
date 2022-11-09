@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 
 void main() {
   runApp(MaterialApp(
+    debugShowCheckedModeBanner: false,
     theme: ThemeData(fontFamily: 'Coolvetica'),
     home: GlicoReader(),
   ));
@@ -51,8 +52,8 @@ class GlicoReader extends StatefulWidget {
 
 String _data = "0 0 0 0 0 0 0 0 0 0 0 0 0 0";
 String filePath = 'assets/data1.txt';
-double nivelRiscoMin = 59;
-double nivelRiscoMax = 126;
+double nivelRiscoMin = 69;
+double nivelRiscoMax = 150;
 String emailEmergencia = 'lecrammattos@live.com';
 String nomeUsuario = 'Marcel';
 var ultimaHora = '00:00';
@@ -442,7 +443,7 @@ class _Settings extends StatelessWidget {
                                         controller: _nivelRiscoMin,
                                         obscureText: false,
                                         decoration: InputDecoration(
-                                          hintText: '60',
+                                          hintText: '70',
                                           enabledBorder: UnderlineInputBorder(
                                             borderSide: BorderSide(
                                               color: Color.fromRGBO(0, 0, 0, 0),
@@ -496,7 +497,7 @@ class _Settings extends StatelessWidget {
                                         controller: _nivelRiscoMax,
                                         obscureText: false,
                                         decoration: InputDecoration(
-                                          hintText: '126',
+                                          hintText: '150',
                                           // hintStyle:,
                                           enabledBorder: UnderlineInputBorder(
                                             borderSide: BorderSide(
